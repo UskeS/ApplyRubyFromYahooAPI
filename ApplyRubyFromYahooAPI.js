@@ -7,9 +7,9 @@ if (!String.prototype.surroundQuotes) {
 
 //-- 関数定義 --//
 /**
- * オブジェクトからパラメータ用の文字列を生成する関数
- * 型によって引用符で囲むかどうか変える
- * Object型が渡されたら再帰的に解決し {key: value} の形にする
+ * オブジェクトからパラメータ用の文字列を生成する関数  
+ * 型によって引用符で囲むかどうか変える  
+ * Object型が渡されたら再帰的に解決し {key: value} の形にする  
  */
 function getParamString(obj) {
     var res = [];
@@ -26,13 +26,13 @@ function getParamString(obj) {
 }
 
 /**
- * Yahoo! テキスト解析APIを利用するための設定を読み込む関数。
- * config.jsonファイルがスクリプトと同階層になければ生成する。
- * config.jsonには`clientID`と`grade`を書き込む。
- * 可変にしたい設定値があればこちらに移動させる。
- * 初回実行時はconfig.jsonを生成してスクリプトは一旦終了する（clientIDを書き換えてもらう必要がある）。
- * 何か問題があった場合は`false`を返す。
- * 問題なく設定が読み込めたらJSONを返す。
+ * Yahoo! テキスト解析APIを利用するための設定を読み込む関数。  
+ * config.jsonファイルがスクリプトと同階層になければ生成する。  
+ * config.jsonには`clientID`と`grade`を書き込む。  
+ * 可変にしたい設定値があればこちらに移動させる。  
+ * 初回実行時はconfig.jsonを生成してスクリプトは一旦終了する（clientIDを書き換えてもらう必要がある）。  
+ * 何か問題があった場合は`false`を返す。  
+ * 問題なく設定が読み込めたらJSONを返す。  
  *
  * @return {Object} clientIDとgradeをもったObject型オブジェクト
  */
@@ -121,6 +121,26 @@ function validateJSON(obj) {
     return true;
 }
 
+function exceptSpecificChars(st) {
+    /**
+     * 半角スペースに置換する文字  
+     * 改行文字（CR、LF）  
+     * \u00A0, \u202F, \u2001-\u200A：特殊スペース関係  
+     * \u3000：全角スペース  
+     * \u0008：backspace（InDesignでは右インデントタブ）  
+     * \u0009：タブ  
+     */
+    var toSpaceChars = /[\r\n\u00A0\u202F\u2001-\u200A\u3000\u0008\u0009]/g;
+    /**
+     * 消去する文字（これらの文字の前後で文節が切れない可能性が高いもの）  
+     * \u0007：BELL（InDesignではここまでインデント文字）  
+     * \uFFFC：Object Replacement Character（InDesignではアンカー）  
+     * \uFEFF：BOM（InDesignでは様々な制御文字）  
+     */
+    var eraseCharas = /[\u0007\uFFFC\uFEFF]/g;
+    return st.replace(toSpaceChars, " ").replace(eraseCharas, "");
+}
+
 //-- 実行処理 ここから --//
 var myConf = getConfig();
 if (!myConf || !validateJSON(myConf)) {
@@ -172,7 +192,7 @@ var response = {};
             jsonrpc: "2.0",
             method: "jlp.furiganaservice.furigana",
             params: {
-                q: sel.contents,
+                q: exceptSpecificChars(sel.contents), //エラーになる可能性がある制御文字等をきれいにする
                 grade: myConf.grade,
             }
         },
@@ -210,7 +230,7 @@ var response = {};
 
 /**
  * response 変数の中身をチェック
- * ここがクリアされれば問題なくルビが格納されている
+ * ここがクリアされれば問題なくルビが格納されていることになる
  */
 if (response.error) {
     var er = response.error;
@@ -221,4 +241,3 @@ if (response.error) {
     alert("#" + $.line + "; 結果が取得できませんでした");
     exit();
 }
-
